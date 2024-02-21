@@ -63,11 +63,14 @@ const App = () => {
     };
 
     useEffect(() => {
+        let ignore = false;
         const fetchPosts = async () => {
             try {
                 const response = await axios.get('/posts');
                 if (response && response.data) {
-                    setPosts(response.data);
+                    if (!ignore) {
+                        setPosts(response.data);
+                    }
                 }
             } catch (err) {
                 if (err.response) {
@@ -80,6 +83,9 @@ const App = () => {
             }
         };
         fetchPosts();
+        return () => {
+            ignore = true;
+        };
     }, []);
     return (
         <div>
