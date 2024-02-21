@@ -1,35 +1,122 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useEffect, useState } from 'react';
+import AddPost from './components/AddPost';
+import EditPost from './components/EditPost';
+import Posts from './components/Posts';
+import axios from './utils/axios';
+const App = () => {
+    const [error, setError] = useState('');
+    const [post, setPost] = useState(null);
+    const [posts, setPosts] = useState([]);
+    const handleAddPost = async (newPost) => {
+        try {
+            const id = posts.length
+                ? Number(posts[posts.length - 1].id) + 1
+                : 1;
+            const response = await axios.post('/posts', {
+                id: id.toString(),
+                ...newPost,
+            });
+            setPosts([...posts, response.data]);
+        } catch (err) {
+            if (err.response) {
+                setError(
+                    `Status: ${err.response.status} - ${err.response.statusText}`
+                );
+            } else {
+                setError(err.message);
+            }
+        }
+    };
+    const handleEditPost = async (updatedPost) => {
+        try {
+            await axios.patch(`/posts/${updatedPost.id}`, updatedPost);
+            setPosts(
+                posts.map((item) =>
+                    item.id === updatedPost.id ? updatedPost : item
+                )
+            );
+        } catch (err) {
+            if (err.response) {
+                setError(
+                    `Status: ${err.response.status} - ${err.response.statusText}`
+                );
+            } else {
+                setError(err.message);
+            }
+        }
+    };
+    const handleDeletePost = async (postId) => {
+        if (confirm('Do you want to really delete this?')) {
+            try {
+                await axios.delete(`/posts/${postId}`);
+                setPosts(posts.filter((item) => item.id !== postId));
+            } catch (err) {
+                if (err.response) {
+                    setError(
+                        `Status: ${err.response.status} - ${err.response.statusText}`
+                    );
+                } else {
+                    setError(err.message);
+                }
+            }
+        }
+    };
 
-function App() {
-  const [count, setCount] = useState(0)
+    useEffect(() => {
+        const fetchPosts = async () => {
+            try {
+                const response = await axios.get('/posts');
+                if (response && response.data) {
+                    setPosts(response.data);
+                }
+            } catch (err) {
+                if (err.response) {
+                    setError(
+                        `Status: ${err.response.status} - ${err.response.statusText}`
+                    );
+                } else {
+                    setError(err.message);
+                }
+            }
+        };
+        fetchPosts();
+    }, []);
+    return (
+        <div>
+            <div>
+                <h1>API Request with Axios</h1>
+                <hr />
 
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+                <div>
+                    <Posts
+                        posts={posts}
+                        onDeletePost={handleDeletePost}
+                        onEditClick={setPost}
+                    />
 
-export default App
+                    <hr />
+
+                    {!post ? (
+                        <AddPost onAddPost={handleAddPost} />
+                    ) : (
+                        <EditPost
+                            key={post.id}
+                            post={post}
+                            onEditPost={handleEditPost}
+                            onReset={() => setPost(null)}
+                        />
+                    )}
+
+                    {error && (
+                        <>
+                            <hr />
+                            <div className="error">{error}</div>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default App;
